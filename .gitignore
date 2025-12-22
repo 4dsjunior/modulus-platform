@@ -1,0 +1,19 @@
+# Ambiente Virtual
+venv/
+env/
+
+# Variáveis de Ambiente e Segredos (NUNCA REMOVA ISSO)
+.env
+
+# Compilados do Python e Cache
+__pycache__/
+*.pyc
+instance/
+.pytest_cache/
+
+# Arquivos de Sistema
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/

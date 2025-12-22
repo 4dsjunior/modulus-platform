@@ -1,0 +1,46 @@
+# ==========================================
+# 1. CORE FRAMEWORK (Flask Stable LTS)
+# ==========================================
+Flask==2.3.3
+Werkzeug==2.3.8
+Jinja2==3.1.2
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+email-validator==2.1.0
+
+# ==========================================
+# 2. BANCO DE DADOS (Supabase Wrapper)
+# ==========================================
+# Instalamos APENAS o pacote principal.
+# Ele puxará automaticamente as versões corretas de postgrest, gotrue e storage3.
+supabase==2.9.1
+
+# ==========================================
+# 3. INTELIGÊNCIA DE DADOS
+# ==========================================
+pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.2
+
+# ==========================================
+# 4. UTILITÁRIOS
+# ==========================================
+qrcode[pil]==7.4.2
+Pillow==10.3.0
+reportlab==4.2.0
+pytz==2024.1
+python-dateutil==2.9.0
+
+# ==========================================
+# 5. INFRAESTRUTURA & SEGURANÇA (CRÍTICO)
+# ==========================================
+python-dotenv==1.0.0
+requests==2.31.0
+gunicorn==21.2.0
+
+# TRAVA DE SEGURANÇA:
+# O Supabase aceita httpx mais novo, mas o httpx novo quebra o proxy.
+# Por isso, aqui nós intercedemos e travamos na versão segura.
+httpx==0.27.2
+httpcore==1.0.5
+pydantic==2.9.2
