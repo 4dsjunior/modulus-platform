@@ -20,13 +20,8 @@ def create_app():
 
     # --- CONFIGURAÇÃO DE SEGURANÇA DA SESSÃO ---
     # Define que a sessão expira automaticamente em 30 minutos de inatividade
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)
-    
-    # Protege contra scripts maliciosos tentando ler o cookie via JavaScript
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    
-    # (Opcional) Em produção (HTTPS), descomente a linha abaixo para obrigar conexão segura
-    # app.config['SESSION_COOKIE_SECURE'] = True 
     # -------------------------------------------
 
     # 1. Iniciar Supabase
@@ -38,9 +33,15 @@ def create_app():
     else:
         supabase = create_client(url, key)
 
-    # 2. Registrar o Módulo de Auth
+    # 2. Registrar Blueprints (Módulos)
+    
+    # Módulo de Autenticação (Login/Logout)
     from app.core.auth import auth_bp
     app.register_blueprint(auth_bp)
+
+    # Módulo Academia (Dashboard e Funcionalidades)
+    from app.modules.academia.routes import academia_bp
+    app.register_blueprint(academia_bp)
 
     # 3. Rota Raiz (Redireciona sempre para login)
     @app.route('/')
