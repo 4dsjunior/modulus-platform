@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Novo Cliente | Modulus Admin{% endblock %}
+
+{% block content %}
+<style>
+    .admin-form-card { max-width: 600px; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin: 0 auto; }
+    .form-header { border-bottom: 2px solid #f7fafc; margin-bottom: 20px; padding-bottom: 10px; }
+    .form-header h2 { margin: 0; color: #1a202c; font-size: 20px; }
+    
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #4a5568; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; }
+    
+    .help-text { font-size: 12px; color: #718096; margin-top: 4px; }
+    
+    .actions { margin-top: 25px; display: flex; gap: 15px; align-items: center; }
+    .btn-save { background: #3182ce; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    .btn-save:hover { background: #2c5282; }
+    .btn-cancel { color: #718096; text-decoration: none; font-size: 14px; }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">Configurar Nova Licença SaaS</h1>
+</div>
+
+<div class="admin-form-card">
+    <div class="form-header">
+        <h2>Dados do Cliente e Módulo</h2>
+    </div>
+
+    <form method="POST">
+        <div class="form-group">
+            <label for="name">Nome da Empresa / Academia</label>
+            <input type="text" id="name" name="name" required placeholder="Ex: Titans Combate">
+        </div>
+
+        <div class="form-group">
+            <label for="slug">URL Amigável (Slug)</label>
+            <input type="text" id="slug" name="slug" required placeholder="ex-titans-combate">
+            <p class="help-text">Use apenas letras minúsculas e hífens.</p>
+        </div>
+
+        <div class="form-group">
+            <label for="module_id">Módulo Principal Contratado</label>
+            <select id="module_id" name="module_id" required>
+                <option value="">Selecione o segmento...</option>
+                {% for mod in modules %}
+                    <option value="{{ mod.id }}">{{ mod.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 20px 0;">
+
+        <div class="form-group">
+            <label for="email">E-mail do Administrador (Login)</label>
+            <input type="email" id="email" name="email" required placeholder="dono@cliente.com">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Senha Inicial de Acesso</label>
+            <input type="password" id="password" name="password" required placeholder="••••••••">
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn-save">Criar Empresa e Usuário</button>
+            <a href="{{ url_for('admin.gerenciar_clientes') }}" class="btn-cancel">Voltar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

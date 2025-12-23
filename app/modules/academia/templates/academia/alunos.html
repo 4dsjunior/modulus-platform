@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Alunos | Modulus Academia{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos de Status - Manutenibilidade centralizada */
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    .status-ativo {
+        background-color: #c6f6d5;
+        color: #22543d;
+    }
+    .status-suspenso {
+        background-color: #fed7d7;
+        color: #822727;
+    }
+    .status-inadimplente {
+        background-color: #feebc8;
+        color: #744210;
+    }
+
+    /* Alerta de Bloqueio SaaS */
+    .alert-suspended {
+        background-color: #fff5f5;
+        border: 1px solid #feb2b2;
+        color: #c53030;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .table-container {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    .table-container th {
+        padding: 12px;
+        border-bottom: 2px solid #edf2f7;
+        color: #718096;
+        font-size: 14px;
+    }
+    .table-container td {
+        padding: 12px;
+        border-bottom: 1px solid #edf2f7;
+    }
+    .btn-action {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        padding: 0;
+    }
+    .btn-edit { color: #3182ce; }
+    .btn-suspend { color: #e53e3e; }
+    .text-locked { color: #a0aec0; font-style: italic; font-size: 12px; }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">Gestão de Alunos</h1>
+    
+    {% if tenant_status == 'active' %}
+        <button style="padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            + Novo Aluno
+        </button>
+    {% else %}
+        <div class="alert-suspended">
+            <strong>⚠️ ACESSO RESTRITO:</strong> 
+            Sua licença está suspensa ou aguardando pagamento. O sistema está em modo de leitura.
+        </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <table class="table-container">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Status</th>
+                <th>Próximo Vencimento</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td style="font-weight: 500;">{{ student.full_name }}</td>
+                <td>
+                    <span class="status-badge status-{{ student.status }}">
+                        {{ student.status }}
+                    </span>
+                </td>
+                <td>{{ student.billing_date if student.billing_date else '--/--/----' }}</td>
+                <td>
+                    {% if tenant_status == 'active' %}
+                        <div style="display: flex; gap: 15px;">
+                            <a href="#" class="btn-action btn-edit">Editar</a>
+                            <form action="{{ url_for('academia.suspender_aluno', student_id=student.id) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn-action btn-suspend">Suspender</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <span class="text-locked">Ações desabilitadas</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: #a0aec0; padding: 40px;">
+                    Nenhum aluno encontrado para este filtro.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
