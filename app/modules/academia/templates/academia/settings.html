@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 text-gray-800">Configurações da Unidade</h2>
+    </div>
+
+    <ul class="nav nav-tabs" id="configTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="atividades-tab" data-bs-toggle="tab" data-bs-target="#atividades" type="button" role="tab">
+                🏋️ Atividades & Planos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro" type="button" role="tab">
+                💳 Meios de Pagamento
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content p-4 border border-top-0 bg-white shadow-sm rounded-bottom">
+        
+        <div class="tab-pane fade show active" id="atividades" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Grade de Modalidades</h5>
+                <button class="btn btn-primary btn-sm" onclick="openActivityModal()">
+                    <i class="bi bi-plus-lg"></i> Nova Atividade
+                </button>
+            </div>
+            
+            <div id="activitiesList" class="row g-3">
+                <div class="col-12 text-center text-muted py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Carregando atividades...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="financeiro" role="tabpanel">
+            <h4>Configuração de Recebimentos</h4>
+            <p class="text-muted">Em breve você poderá configurar chaves PIX, Gateways de Cartão e Boletos aqui.</p>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="activityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title">Nova Atividade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formActivity">
+                    <div class="row mb-3 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Nome da Modalidade</label>
+                            <input type="text" class="form-control" name="name" placeholder="Ex: Muay Thai" required>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="isActiveCheck" checked>
+                                <label class="form-check-label" for="isActiveCheck">Ativa no sistema</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0">📅 Horários (Agenda)</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addScheduleRow()">
+                                <i class="bi bi-plus"></i> Adicionar
+                            </button>
+                        </div>
+                        <div id="schedulesContainer" class="bg-light p-2 rounded">
+                            <small class="text-muted d-block text-center p-2 empty-msg">Nenhum horário definido ainda.</small>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0">💲 Planos de Preço (Combos)</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPlanRow()">
+                                <i class="bi bi-plus"></i> Adicionar
+                            </button>
+                        </div>
+                        <div id="plansContainer" class="bg-light p-2 rounded">
+                            <small class="text-muted d-block text-center p-2 empty-msg">Nenhum plano de preço definido.</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveActivity()">
+                    <span id="btnSaveText">Salvar Atividade</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- CARREGAMENTO INICIAL ---
+document.addEventListener('DOMContentLoaded', loadActivities);
+
+// --- FUNÇÕES DE UI (GERENCIAMENTO DO MODAL) ---
+
+function openActivityModal() {
+    const form = document.getElementById('formActivity');
+    form.reset();
+    document.getElementById('schedulesContainer').innerHTML = ''; // Limpa container
+    document.getElementById('plansContainer').innerHTML = '';     // Limpa container
+    
+    // Adiciona linhas iniciais para facilitar
+    addScheduleRow(); 
+    addPlanRow();     
+    
+    const modalEl = document.getElementById('activityModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+function addScheduleRow() {
+    // Remove mensagem de vazio se existir
+    const container = document.getElementById('schedulesContainer');
+    const emptyMsg = container.querySelector('.empty-msg');
+    if(emptyMsg) emptyMsg.remove();
+
+    const html = `
+    <div class="row g-2 mb-2 schedule-row align-items-center animate__animated animate__fadeIn">
+        <div class="col-md-3">
+            <select class="form-select form-select-sm schedule-day">
+                <option value="1">Segunda</option>
+                <option value="2">Terça</option>
+                <option value="3">Quarta</option>
+                <option value="4">Quinta</option>
+                <option value="5">Sexta</option>
+                <option value="6">Sábado</option>
+                <option value="0">Domingo</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="time" class="form-control form-control-sm schedule-start" required>
+        </div>
+        <div class="col-md-2">
+            <input type="time" class="form-control form-control-sm schedule-end" required>
+        </div>
+        <div class="col-md-4">
+            <input type="text" class="form-control form-control-sm schedule-instructor" placeholder="Instrutor (ex: João)">
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('.row').remove()" title="Remover">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function addPlanRow() {
+    const container = document.getElementById('plansContainer');
+    const emptyMsg = container.querySelector('.empty-msg');
+    if(emptyMsg) emptyMsg.remove();
+
+    const html = `
+    <div class="row g-2 mb-2 plan-row align-items-center animate__animated animate__fadeIn">
+        <div class="col-md-4">
+            <input type="text" class="form-control form-control-sm plan-title" placeholder="Nome (Ex: Mensal 3x)" required>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select form-select-sm plan-cycle">
+                <option value="mensal">Mensal</option>
+                <option value="trimestral">Trimestral</option>
+                <option value="semestral">Semestral</option>
+                <option value="anual">Anual</option>
+                <option value="avulso">Avulso</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">R$</span>
+                <input type="number" class="form-control plan-price" placeholder="0.00" step="0.01" required>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select form-select-sm plan-freq">
+                <option value="Livre">Livre</option>
+                <option value="1">1x Sem</option>
+                <option value="2">2x Sem</option>
+                <option value="3">3x Sem</option>
+                <option value="4">4x Sem</option>
+                <option value="5">5x Sem</option>
+                <option value="6">6x Sem</option>
+            </select>
+        </div>
+        <div class="col-md-1 text-end">
+            <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="this.closest('.row').remove()" title="Remover">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+// --- COMUNICAÇÃO COM A API (BACKEND) ---
+
+async function saveActivity() {
+    const btnSave = document.querySelector('#activityModal .btn-primary');
+    const originalText = document.getElementById('btnSaveText').innerText;
+    
+    // 1. Coleta e Validação dos Dados
+    const form = document.getElementById('formActivity');
+    const name = form.name.value.trim();
+    if(!name) { alert('O nome da atividade é obrigatório.'); return; }
+
+    // Coleta Horários
+    const schedules = [];
+    document.querySelectorAll('.schedule-row').forEach(row => {
+        const start = row.querySelector('.schedule-start').value;
+        const end = row.querySelector('.schedule-end').value;
+        if(start && end) { // Só adiciona se tiver horário preenchido
+            schedules.push({
+                day: row.querySelector('.schedule-day').value,
+                start: start,
+                end: end,
+                instructor: row.querySelector('.schedule-instructor').value
+            });
+        }
+    });
+
+    // Coleta Planos
+    const plans = [];
+    document.querySelectorAll('.plan-row').forEach(row => {
+        const title = row.querySelector('.plan-title').value;
+        const price = row.querySelector('.plan-price').value;
+        if(title && price) {
+            plans.push({
+                title: title,
+                cycle: row.querySelector('.plan-cycle').value,
+                price: price,
+                frequency: row.querySelector('.plan-freq').value
+            });
+        }
+    });
+
+    const payload = {
+        name: name,
+        is_active: form.is_active.checked,
+        schedules: schedules,
+        pricing_plans: plans
+    };
+
+    // 2. Envio para o Flask
+    try {
+        btnSave.disabled = true;
+        document.getElementById('btnSaveText').innerText = 'Salvando...';
+
+        const res = await fetch('/activities/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            // Sucesso
+            const modalEl = document.getElementById('activityModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+            
+            // Recarrega a lista
+            await loadActivities();
+            alert('Atividade salva com sucesso!');
+        } else {
+            // Erro do Backend
+            alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Erro de conexão ao tentar salvar.');
+    } finally {
+        btnSave.disabled = false;
+        document.getElementById('btnSaveText').innerText = originalText;
+    }
+}
+
+async function loadActivities() {
+    const container = document.getElementById('activitiesList');
+    
+    try {
+        const res = await fetch('/activities'); // Chama a rota GET Python
+        
+        if (!res.ok) throw new Error('Falha ao buscar dados');
+        
+        const data = await res.json();
+        container.innerHTML = '';
+
+        if (data.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-clipboard-x display-4 text-muted"></i>
+                    <p class="mt-3 text-muted">Nenhuma atividade cadastrada.<br>Clique em "Nova Atividade" para começar.</p>
+                </div>`;
+            return;
+        }
+
+        data.forEach(act => {
+            // Renderiza o Card
+            const statusBadge = act.is_active 
+                ? '<span class="badge bg-success">Ativa</span>' 
+                : '<span class="badge bg-secondary">Inativa</span>';
+                
+            const card = `
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm hover-shadow transition">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title fw-bold text-primary mb-0">${act.name}</h5>
+                            ${statusBadge}
+                        </div>
+                        
+                        <div class="mb-3 small">
+                            <div class="d-flex align-items-center text-muted mb-1">
+                                <i class="bi bi-calendar-week me-2"></i>
+                                <span>${act.activity_schedules.length} horários configurados</span>
+                            </div>
+                            <div class="d-flex align-items-center text-muted">
+                                <i class="bi bi-tag me-2"></i>
+                                <span>${act.pricing_plans.length} planos de preço</span>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button class="btn btn-outline-secondary btn-sm" disabled>
+                                <i class="bi bi-pencil"></i> Editar (Em breve)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            container.insertAdjacentHTML('beforeend', card);
+        });
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = `<div class="alert alert-danger">Erro ao carregar atividades. Tente recarregar a página.</div>`;
+    }
+}
+</script>
+
+<style>
+    /* Estilos Extras Específicos para esta página */
+    .hover-shadow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    .transition {
+        transition: all 0.2s ease-in-out;
+    }
+</style>
+{% endblock %}
