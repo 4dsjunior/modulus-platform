@@ -3,42 +3,39 @@ from app import supabase
 import os
 from supabase import create_client
 
-# Instância com Service Role para ignorar RLS e realizar operações de Admin
-admin_supabase = create_client(
-    os.getenv("SUPABASE_URL"), 
-    os.getenv("SUPABASE_SERVICE_KEY")
-)
+# Instância Admin (Service Role)
+admin_supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KEY"))
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+def log_action(action, target_id, details):
+    """Regista acções críticas na tabela audit_logs (Requisito 6.1)"""
+    try:
+        admin_supabase.table("audit_logs").insert({
+            "performed_by": session.get('user_id'),
+            "action": action,
+            "target_user_id": target_id, # Usado aqui como ID do Alvo (User ou Tenant)
+            "details": details
+        }).execute()
+    except Exception as e:
+        print(f"Erro ao gerar log de auditoria: {e}")
+
 @admin_bp.before_request
 def restrict_to_superadmin():
-    """Garante que apenas o Super Admin acesse este módulo."""
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
-    
-    # Verifica se o perfil do usuário logado é super admin
     res = supabase.table("profiles").select("is_super_admin").eq("id", session['user_id']).single().execute()
-    
     if not res.data or not res.data.get('is_super_admin'):
-        flash("Acesso restrito ao Super Administrador.")
+        flash("Acesso restrito.")
         return redirect(url_for('academia.dashboard'))
 
 @admin_bp.route('/clientes')
 def gerenciar_clientes():
-    """Lista todos os clientes (Tenants) usando a chave de serviço para ignorar RLS."""
-    try:
-        # Usamos admin_supabase para garantir que o Super Admin veja TUDO
-        tenants = admin_supabase.table("tenants").select("*").order("name").execute()
-        return render_template('admin/clientes.html', tenants=tenants.data if tenants.data else [])
-    except Exception as e:
-        flash(f"Erro ao carregar clientes: {str(e)}")
-        return render_template('admin/clientes.html', tenants=[])
+    tenants = admin_supabase.table("tenants").select("*").order("name").execute()
+    return render_template('admin/clientes.html', tenants=tenants.data if tenants.data else [])
 
 @admin_bp.route('/clientes/novo', methods=['GET', 'POST'])
 def criar_cliente():
-    """Busca módulos e processa a criação de um novo cliente SaaS."""
-    
     if request.method == 'POST':
         name = request.form.get('name')
         slug = request.form.get('slug')
@@ -47,62 +44,57 @@ def criar_cliente():
         password = request.form.get('password')
 
         try:
-            # 1. Criar o Tenant (A empresa/academia)
-            tenant_res = admin_supabase.table("tenants").insert({
-                "name": name,
-                "slug": slug,
-                "status": "active"
-            }).execute()
+            # 1. Tenant
+            t_res = admin_supabase.table("tenants").insert({"name": name, "slug": slug, "status": "active"}).execute()
+            if not t_res.data: raise Exception("Falha ao criar Tenant.")
+            t_id = t_res.data[0]['id']
 
-            if not tenant_res.data:
-                raise Exception("Erro ao criar registro do Tenant.")
-            
-            tenant_id = tenant_res.data[0]['id']
-
-            # 2. Criar o Usuário no Auth do Supabase (Login direto com email confirmado)
+            # 2. Auth User
             auth_res = admin_supabase.auth.admin.create_user({
-                "email": email,
-                "password": password,
-                "email_confirm": True,
+                "email": email, "password": password, "email_confirm": True,
                 "user_metadata": {"full_name": name}
             })
+            if not auth_res.user: raise Exception("Falha ao criar acesso (Auth).")
+            u_id = auth_res.user.id
 
-            if not auth_res.user:
-                raise Exception("Erro ao criar usuário de autenticação.")
+            # 3. Member & Module (Requisito 3 do Relatório)
+            admin_supabase.table("tenant_members").insert({"tenant_id": t_id, "user_id": u_id, "role": "owner"}).execute()
+            admin_supabase.table("tenant_modules").insert({"tenant_id": t_id, "module_id": module_id, "is_enabled": True}).execute()
 
-            user_id = auth_res.user.id
+            # 4. Auditoria (Requisito 6.1)
+            log_action("CREATE_TENANT", u_id, {"tenant_name": name, "module": module_id})
 
-            # 3. Vincular Usuário ao Tenant como 'owner'
-            admin_supabase.table("tenant_members").insert({
-                "tenant_id": tenant_id,
-                "user_id": user_id,
-                "role": "owner"
-            }).execute()
-
-            # 4. Ativar o Módulo escolhido para este Tenant
-            admin_supabase.table("tenant_modules").insert({
-                "tenant_id": tenant_id,
-                "module_id": module_id,
-                "is_enabled": True
-            }).execute()
-
-            flash(f"Sucesso! Academia '{name}' criada e módulo '{module_id}' ativado.")
-            return redirect(url_for('admin.gerenciar_clientes'))
+            flash(f"Sucesso: Academia '{name}' configurada correctamente!") # Requisito 6.3
+            return redirect(url_for('admin.gerenciar_clientes')) # Requisito 6.4
 
         except Exception as e:
-            flash(f"Falha na operação: {str(e)}")
+            # Requisito 6.4: Retornar erro padronizado
+            error_msg = f"Erro na Criação: {str(e)}"
+            flash(error_msg)
             return redirect(url_for('admin.criar_cliente'))
 
-    # GET: Busca os módulos disponíveis para preencher o select no HTML
     modules_res = supabase.table("modules").select("*").execute()
     return render_template('admin/form_cliente.html', modules=modules_res.data)
 
 @admin_bp.route('/clientes/status/<tenant_id>/<novo_status>', methods=['POST'])
 def alterar_status(tenant_id, novo_status):
-    """Altera o status da licença (active, suspended, archived)."""
+    """Fluxo Unificado de Suspensão e Reativação (Requisito 6.2)"""
     try:
-        admin_supabase.table("tenants").update({"status": novo_status}).eq("id", tenant_id).execute()
-        flash(f"Status do cliente atualizado para {novo_status}.")
+        # Validação de estado
+        valid_status = ['active', 'suspended', 'archived']
+        if novo_status not in valid_status:
+            raise Exception("Estado inválido.")
+
+        res = admin_supabase.table("tenants").update({"status": novo_status}).eq("id", tenant_id).execute()
+        
+        if res.data:
+            # Auditoria obrigatória
+            log_action(f"CHANGE_STATUS_{novo_status.upper()}", None, {"tenant_id": tenant_id})
+            flash(f"Status atualizado para {novo_status.upper()} com sucesso.")
+        else:
+            raise Exception("Tenant não encontrado.")
+
     except Exception as e:
-        flash(f"Erro ao atualizar status: {e}")
+        flash(f"Erro ao alterar status: {str(e)}")
+    
     return redirect(url_for('admin.gerenciar_clientes'))

@@ -30,9 +30,10 @@
         font-size: 12px;
         font-weight: bold;
     }
+    /* Cores dinâmicas para os badges */
     .status-active { background-color: #c6f6d5; color: #22543d; }
     .status-suspended { background-color: #feebc8; color: #744210; }
-    .status-banned { background-color: #fed7d7; color: #822727; }
+    .status-archived { background-color: #fed7d7; color: #822727; }
 
     .admin-table {
         width: 100%;
@@ -64,9 +65,15 @@
         cursor: pointer;
         border: 1px solid #e2e8f0;
         background: white;
+        font-weight: 600;
     }
+    /* Botão Suspender */
     .btn-suspend { color: #dd6b20; border-color: #dd6b20; }
     .btn-suspend:hover { background: #dd6b20; color: white; }
+    
+    /* Botão Reativar */
+    .btn-activate { color: #38a169; border-color: #38a169; }
+    .btn-activate:hover { background: #38a169; color: white; }
 </style>
 
 <div class="admin-container">
@@ -102,10 +109,16 @@
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <form action="{{ url_for('admin.alterar_status', tenant_id=tenant.id, novo_status='suspended') }}" method="POST">
-                                <button type="submit" class="btn-small btn-suspend">Suspender</button>
-                            </form>
-                            </div>
+                            {% if tenant.status == 'active' %}
+                                <form action="{{ url_for('admin.alterar_status', tenant_id=tenant.id, novo_status='suspended') }}" method="POST">
+                                    <button type="submit" class="btn-small btn-suspend">Suspender</button>
+                                </form>
+                            {% else %}
+                                <form action="{{ url_for('admin.alterar_status', tenant_id=tenant.id, novo_status='active') }}" method="POST">
+                                    <button type="submit" class="btn-small btn-activate">Reativar Cliente</button>
+                                </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% else %}
