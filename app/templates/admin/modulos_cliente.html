@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Gerir Módulos | Modulus Admin{% endblock %}
+
+{% block content %}
+<style>
+    .admin-container { padding: 20px; }
+    .header-title { margin-bottom: 20px; }
+    
+    .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    
+    .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .admin-table th { background-color: #f7fafc; padding: 15px; text-align: left; color: #4a5568; border-bottom: 2px solid #edf2f7; font-size: 14px; }
+    .admin-table td { padding: 15px; border-bottom: 1px solid #edf2f7; font-size: 14px; }
+    
+    .btn-back { color: #718096; text-decoration: none; display: inline-flex; align-items: center; margin-bottom: 15px; font-weight: 600; font-size: 14px; }
+    .btn-back:hover { color: #2d3748; }
+
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    .status-active { background-color: #c6f6d5; color: #22543d; }
+    .status-inactive { background-color: #fed7d7; color: #822727; }
+
+    .btn-small { padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid #e2e8f0; background: white; font-weight: 600; transition: 0.2s; }
+    
+    .btn-toggle-off { color: #e53e3e; border-color: #e53e3e; }
+    .btn-toggle-off:hover { background: #e53e3e; color: white; }
+    
+    .btn-toggle-on { color: #38a169; border-color: #38a169; }
+    .btn-toggle-on:hover { background: #38a169; color: white; }
+
+    /* Estilos do Formulário de Adição */
+    .add-module-form { display: flex; gap: 10px; align-items: flex-end; }
+    .form-group { flex: 1; }
+    .form-group label { display: block; font-size: 13px; color: #4a5568; margin-bottom: 5px; font-weight: bold; }
+    .form-select { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background-color: white; }
+    .btn-add { background-color: #3182ce; color: white; border: none; padding: 11px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-add:hover { background-color: #2c5282; }
+</style>
+
+<div class="admin-container">
+    <a href="{{ url_for('admin.gerenciar_clientes') }}" class="btn-back">← Voltar para Lista de Clientes</a>
+    
+    <div class="header-title">
+        <h1 class="page-title" style="margin:0">Gestão de Módulos</h1>
+        <p style="color: #718096; margin-top: 5px;">Cliente: <strong>{{ tenant.name }}</strong></p>
+    </div>
+
+    <div class="card" style="border-left: 4px solid #3182ce;">
+        <h3 style="margin-top: 0; font-size: 16px; color: #2d3748;">Adicionar Novo Segmento</h3>
+        <p style="font-size: 13px; color: #718096; margin-bottom: 15px;">Selecione um módulo para liberar o acesso a este cliente.</p>
+        
+        <form action="{{ url_for('admin.adicionar_modulo', tenant_id=tenant_id) }}" method="POST" class="add-module-form">
+            <div class="form-group">
+                <label for="module_id">Módulo Disponível</label>
+                <select name="module_id" id="module_id" class="form-select" required>
+                    <option value="" disabled selected>Selecione...</option>
+                    {% for m in todos_modulos %}
+                        <option value="{{ m.id }}">{{ m.name }} - {{ m.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-add">+ Adicionar Módulo</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 16px; color: #2d3748; margin-bottom: 0;">Módulos Contratados</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Módulo / Segmento</th>
+                    <th>Estado Atual</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in modulos %}
+                <tr>
+                    <td>
+                        <strong>{{ item.modules.name }}</strong><br>
+                        <span style="font-size: 12px; color: #718096;">ID: {{ item.module_id }}</span>
+                    </td>
+                    <td>
+                        {% if item.is_enabled %}
+                            <span class="status-badge status-active">ATIVO</span>
+                        {% else %}
+                            <span class="status-badge status-inactive">SUSPENSO</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.alterar_status_modulo', tenant_id=tenant_id, module_id=item.module_id, novo_estado=0 if item.is_enabled else 1) }}" method="POST" style="margin:0;">
+                            {% if item.is_enabled %}
+                                <button type="submit" class="btn-small btn-toggle-off">Bloquear Acesso</button>
+                            {% else %}
+                                <button type="submit" class="btn-small btn-toggle-on">Liberar Acesso</button>
+                            {% endif %}
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 30px; color: #a0aec0;">
+                        Este cliente não possui módulos ativos. Utilize o formulário acima para adicionar.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

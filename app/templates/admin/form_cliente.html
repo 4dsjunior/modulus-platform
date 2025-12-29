@@ -30,7 +30,7 @@
 
     <form method="POST">
         <div class="form-group">
-            <label for="name">Nome da Empresa / Academia</label>
+            <label for="name">Nome da Empresa</label>
             <input type="text" id="name" name="name" required placeholder="Ex: Titans Combate">
         </div>
 
@@ -41,7 +41,7 @@
         </div>
 
         <div class="form-group">
-            <label for="module_id">Módulo Principal Contratado</label>
+            <label for="module_id">Módulo Contratado</label>
             <select id="module_id" name="module_id" required>
                 <option value="">Selecione o segmento...</option>
                 {% for mod in modules %}
@@ -53,17 +53,17 @@
         <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 20px 0;">
 
         <div class="form-group">
-            <label for="email">E-mail do Administrador (Login)</label>
+            <label for="email">E-mail (Login)</label>
             <input type="email" id="email" name="email" required placeholder="dono@cliente.com">
         </div>
 
         <div class="form-group">
-            <label for="password">Senha Inicial de Acesso</label>
+            <label for="password">Senha de Acesso</label>
             <input type="password" id="password" name="password" required placeholder="••••••••">
         </div>
 
         <div class="actions">
-            <button type="submit" class="btn-save">Criar Empresa e Usuário</button>
+            <button type="submit" class="btn-save">Criar</button>
             <a href="{{ url_for('admin.gerenciar_clientes') }}" class="btn-cancel">Voltar</a>
         </div>
     </form>

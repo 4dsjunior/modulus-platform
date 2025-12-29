@@ -34,8 +34,13 @@
         .page-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
         .page-title { margin: 0; font-size: 24px; color: #1a202c; }
 
-        /* CARDS (Para usar no dashboard) */
+        /* CARDS */
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* ALERTAS (FLASH MESSAGES) - NOVO */
+        .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid transparent; }
+        .alert-info { background-color: #bee3f8; color: #2c5282; border-color: #90cdf4; }
+        .alert-warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
     </style>
 </head>
 <body>
@@ -69,36 +74,37 @@
     </aside>
 
     <main class="main-content">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="alert {{ 'alert-warning' if 'erro' in message.lower() or 'falha' in message.lower() else 'alert-info' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
         {% block content %}{% endblock %}
     </main>
+
 <script>
     (function() {
-        // Configuração: 5 minutos em milissegundos (5 * 60 * 1000)
         const timeoutDuration = 5 * 60 * 1000; 
         let idleTimer;
-
-        // Função para redirecionar ao logout
         const logoutUser = () => {
             console.log("Inatividade detectada. Redirecionando para logout...");
-            // Usamos url_for do Flask para garantir que a rota esteja correta
             window.location.href = "{{ url_for('auth.logout') }}";
         };
-
-        // Função para resetar o cronômetro
         const resetTimer = () => {
             clearTimeout(idleTimer);
             idleTimer = setTimeout(logoutUser, timeoutDuration);
         };
-
-        // Eventos que indicam atividade do usuário
         const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-
-        // Registra os ouvintes de eventos
         activityEvents.forEach(event => {
             document.addEventListener(event, resetTimer, true);
         });
-
-        // Inicia o cronômetro pela primeira vez
         resetTimer();
     })();
 </script>
