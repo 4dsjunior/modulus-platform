@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash
+from supabase import create_client, Client
+from app.utils import normalizar_texto
 from app import supabase
 import os
-from supabase import create_client, Client
 
-# Instância com Service Role (Super Admin)
+# Instância com Service Role (Super Admin) - Necessária para bypass de RLS e gestão de Auth
 admin_supabase: Client = create_client(
     os.getenv("SUPABASE_URL"), 
     os.getenv("SUPABASE_SERVICE_KEY")
@@ -29,13 +30,13 @@ def restrict_to_superadmin():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    # Verifica cache de sessão ou consulta banco
+    # Verifica cache de sessão ou consulta banco para garantir privilégios
     if session.get('is_super_admin'):
         return None
 
     res = supabase.table("profiles").select("is_super_admin").eq("id", session['user_id']).single().execute()
     if res.data and res.data.get('is_super_admin'):
-        session['is_super_admin'] = True # Otimização
+        session['is_super_admin'] = True # Otimização de performance
         return None
     
     flash("Acesso restrito ao Super Administrador.")
@@ -56,21 +57,23 @@ def gerenciar_clientes():
 @admin_bp.route('/clientes/novo', methods=['GET', 'POST'])
 def criar_cliente():
     """
-    Cria uma nova Unidade (Tenant).
+    Cria uma nova Unidade (Tenant) com normalização de texto.
     INTELIGÊNCIA: Se o e-mail já existe, vincula a nova unidade ao usuário existente.
     """
     if request.method == 'POST':
-        name = request.form.get('name')
-        slug = request.form.get('slug')
+        # Captura e Normalização dos Dados
+        raw_name = request.form.get('name')
+        name = normalizar_texto(raw_name) # APLICAÇÃO DA NORMALIZAÇÃO (CAPS LOCK)
+        
+        slug = request.form.get('slug').lower().strip() # Slugs são sempre minúsculos por padrão de URL
         module_id = request.form.get('module_id')
-        email = request.form.get('email')
+        email = request.form.get('email').lower().strip() # Emails sempre em minúsculas
         password = request.form.get('password')
 
         tenant_id_created = None
 
         try:
             # 1. Tenta Criar a Nova Unidade (Tenant)
-            # O slug deve ser único (ex: titans-laranjeiras)
             tenant_res = admin_supabase.table("tenants").insert({
                 "name": name,
                 "slug": slug,
@@ -86,50 +89,35 @@ def criar_cliente():
 
             # 2. Gerenciar Usuário (Criação ou Busca)
             try:
-                # Tenta criar usuário novo
                 auth_res = admin_supabase.auth.admin.create_user({
                     "email": email,
                     "password": password,
                     "email_confirm": True,
-                    "user_metadata": {"full_name": name} # Nome genérico inicial
+                    "user_metadata": {"full_name": name}
                 })
                 user_id = auth_res.user.id
                 is_new_user = True
             
             except Exception as auth_error:
-                # Se der erro 422 (Email exists), buscamos o ID do usuário existente
+                # Caso o e-mail já exista, buscamos o ID no banco (Profiles)
                 if "already been registered" in str(auth_error) or "email_exists" in str(auth_error):
-                    # Como não temos "get_user_by_email" direto simples na lib padrão as vezes,
-                    # fazemos uma query direta na tabela auth.users via service_role (Admin Power)
-                    # Nota: Isso requer acesso ao schema auth, ou list_users
-                    
-                    # Tentativa via API Admin list_users (mais seguro)
-                    # Pega o primeiro que bater o email
-                    # Se falhar, lançamos o erro original
                     print(f"Usuário {email} já existe. Tentando vincular...")
-                    
-                    # Truque: Como não dá para filtrar por email no list_users facilmente em versoes antigas,
-                    # podemos assumir que o admin sabe o que faz ou usar um RPC.
-                    # Mas vamos tentar o método RPC seguro ou query direta se permitido.
-                    
-                    # Método Garantido (Service Role query na tabela de perfis que é espelho)
                     profile_res = admin_supabase.table("profiles").select("id").eq("email", email).single().execute()
                     if profile_res.data:
                         user_id = profile_res.data['id']
-                        print(f"ID recuperado do perfil: {user_id}")
                     else:
-                        raise Exception("E-mail existe no Auth mas não tem Perfil (Profile). Corrija o banco.")
+                        raise Exception("E-mail existe no Auth mas o Perfil (Profile) não foi encontrado.")
                 else:
                     raise auth_error
 
-            # 3. Vincular Usuário à Nova Unidade (Owner)
+            # 3. Vincular Usuário à Nova Unidade como Proprietário (Owner)
             admin_supabase.table("tenant_members").insert({
                 "tenant_id": tenant_id_created,
                 "user_id": user_id,
                 "role": "owner"
             }).execute()
 
-            # 4. Ativar o Módulo Inicial
+            # 4. Ativar o Módulo Inicial selecionado
             admin_supabase.table("tenant_modules").insert({
                 "tenant_id": tenant_id_created,
                 "module_id": module_id,
@@ -138,24 +126,21 @@ def criar_cliente():
 
             # 5. Auditoria e Feedback
             msg_sucesso = f"Nova Unidade '{name}' criada! "
-            if is_new_user:
-                msg_sucesso += "Novo usuário cadastrado."
-            else:
-                msg_sucesso += "Vinculada ao usuário existente."
+            msg_sucesso += "Novo usuário cadastrado." if is_new_user else "Vinculada ao usuário existente."
 
             log_action("CREATE_TENANT", {"slug": slug, "new_user": is_new_user}, target_user_id=user_id)
             flash(msg_sucesso)
             return redirect(url_for('admin.gerenciar_clientes'))
 
         except Exception as e:
-            # ROLLBACK: Se falhar, apaga a unidade criada para não deixar lixo
+            # ROLLBACK: Remove a unidade se a criação do vínculo falhar
             if tenant_id_created:
                 admin_supabase.table("tenants").delete().eq("id", tenant_id_created).execute()
             
             flash(f"Falha ao criar unidade: {str(e)}")
             return redirect(url_for('admin.criar_cliente'))
 
-    # GET
+    # GET: Carrega módulos disponíveis para o formulário
     modules_res = supabase.table("modules").select("*").execute()
     return render_template('admin/form_cliente.html', modules=modules_res.data)
 
@@ -169,7 +154,8 @@ def alterar_status(tenant_id, novo_status):
         flash(f"Erro: {e}")
     return redirect(url_for('admin.gerenciar_clientes'))
 
-# --- ROTAS DE MÓDULOS ---
+# --- ROTAS DE GESTÃO DE MÓDULOS POR CLIENTE ---
+
 @admin_bp.route('/clientes/modulos/<tenant_id>')
 def gerenciar_modulos_cliente(tenant_id):
     try:
@@ -191,11 +177,11 @@ def adicionar_modulo(tenant_id):
     try:
         exists = admin_supabase.table("tenant_modules").select("*").eq("tenant_id", tenant_id).eq("module_id", module_id).execute()
         if exists.data:
-            flash("Módulo já existente.")
+            flash("Módulo já existente para este cliente.")
         else:
             admin_supabase.table("tenant_modules").insert({"tenant_id": tenant_id, "module_id": module_id, "is_enabled": True}).execute()
             log_action("ADD_MODULE", {"tenant_id": tenant_id, "module_id": module_id})
-            flash("Módulo adicionado!")
+            flash("Módulo adicionado com sucesso!")
     except Exception as e:
         flash(f"Erro: {str(e)}")
     return redirect(url_for('admin.gerenciar_modulos_cliente', tenant_id=tenant_id))
@@ -205,7 +191,7 @@ def alterar_status_modulo(tenant_id, module_id, novo_estado):
     try:
         is_enabled = bool(novo_estado)
         admin_supabase.table("tenant_modules").update({"is_enabled": is_enabled}).eq("tenant_id", tenant_id).eq("module_id", module_id).execute()
-        flash(f"Módulo {'ativado' if is_enabled else 'suspenso'}.")
+        flash(f"Módulo {'ativado' if is_enabled else 'suspenso'} com sucesso.")
     except Exception as e:
         flash(f"Erro: {str(e)}")
     return redirect(url_for('admin.gerenciar_modulos_cliente', tenant_id=tenant_id))
