@@ -3,120 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Modulus Academia{% endblock %}</title>
+    <title>{% block title %}Modulus Platform{% endblock %}</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <style>
         :root {
-            --sidebar-width: 250px;
-            --primary-color: #1a202c; /* Dark Slate */
-            --accent-color: #3182ce;   /* Blue */
-            --bg-color: #f7fafc;
-            --text-color: #2d3748;
+            --sidebar-bg: #1a202c;
+            --sidebar-hover: #2d3748;
+            --accent-color: #4a90e2;
+            --text-muted: #a0aec0;
+            --text-main: #edf2f7;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --bg-body: #f8fafc;
         }
         
         body { 
-            margin: 0; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
-            display: flex; 
-            height: 100vh; 
-            overflow: hidden; 
+            margin: 0; display: flex; height: 100vh; overflow: hidden; 
+            background-color: var(--bg-body); font-family: 'Inter', sans-serif;
+        }
+
+        /* SIDEBAR MONOLÍTICO */
+        .sidebar { 
+            width: 260px; background-color: var(--sidebar-bg); 
+            color: var(--text-main); display: flex; flex-direction: column; 
+            flex-shrink: 0; transition: all 0.3s ease;
+            z-index: 1100;
         }
         
-        /* SIDEBAR */
-        .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: white; display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #2d3748; display: flex; align-items: center; gap: 10px; }
-        .logo-icon { width: 30px; height: 30px; background: var(--accent-color); border-radius: 6px; }
-        
-        .nav-links { flex: 1; padding: 20px 0; list-style: none; margin: 0; padding-left: 0; }
-        .nav-item a { display: block; padding: 12px 20px; color: #cbd5e0; text-decoration: none; transition: 0.2s; border-left: 3px solid transparent; }
-        .nav-item a:hover, .nav-item a.active { background-color: #2d3748; color: white; border-left-color: var(--accent-color); }
-        
-        .user-profile { padding: 20px; border-top: 1px solid #2d3748; font-size: 14px; color: #a0aec0; }
-        .user-profile a { color: #fc8181; text-decoration: none; margin-top: 5px; display: block; }
+        /* HEADER E LOGO */
+        .sidebar-header { 
+            padding: 24px 20px; 
+            display: flex; align-items: center; gap: 12px;
+        }
+        .logo-container {
+            background: white; 
+            padding: 5px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            width: 32px; height: 32px;
+        }
 
-        /* CONTEÚDO PRINCIPAL */
-        .main-content { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; }
+        /* SELETORES INTEGRADOS COM CORREÇÃO DE CONTRASTE */
+        .context-section {
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 10px;
+        }
+        .context-group { margin-bottom: 12px; }
+        .context-label { 
+            font-size: 10px; font-weight: 600; text-transform: uppercase; 
+            color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 6px; display: block;
+        }
         
-        /* Ajuste para Flash Messages no Bootstrap */
-        .alert { margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .form-select-custom { 
+            background-color: var(--glass-bg); 
+            color: #ffffff !important; /* Texto branco puro para alto contraste */
+            border: 1px solid rgba(255,255,255,0.15); 
+            font-size: 13px; border-radius: 6px; padding: 8px 12px;
+            width: 100%; transition: all 0.2s;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ffffff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: right 12px center; background-size: 12px;
+            appearance: none;
+        }
+
+        /* Correção específica para a lista de opções (Dropdown) */
+        .form-select-custom option {
+            background-color: #2d3748; /* Fundo sólido escuro */
+            color: #ffffff; /* Texto branco */
+            padding: 12px;
+        }
+
+        .form-select-custom:focus { 
+            outline: none; 
+            border-color: #ffffff; 
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.4);
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* NAVEGAÇÃO */
+        .nav-links { flex: 1; padding: 0 10px; list-style: none; margin: 0; }
+        .nav-item { margin-bottom: 4px; }
+        .nav-item a { 
+            display: flex; align-items: center; gap: 12px; padding: 10px 15px; 
+            color: var(--text-muted); text-decoration: none; border-radius: 6px;
+            font-size: 14px; transition: all 0.2s ease;
+        }
+        .nav-item a i { font-size: 18px; }
+        .nav-item a:hover:not(.disabled-link) { background-color: var(--sidebar-hover); color: white; }
+        .nav-item a.active { background-color: rgba(74, 144, 226, 0.1); color: var(--accent-color); font-weight: 500; }
+        .disabled-link { opacity: 0.2; cursor: not-allowed; filter: grayscale(1); pointer-events: none; }
+
+        /* FOOTER */
+        .sidebar-footer { padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.1); }
+
+        /* MAIN CONTENT & WATERMARK */
+        .main-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; position: relative; }
+        .content-area { padding: 30px; flex: 1; z-index: 10; position: relative; }
+        .watermark-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background-color: var(--bg-body); z-index: 1000;
+        }
+        .watermark-logo { max-width: 350px; opacity: 0.07; filter: grayscale(100%); }
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="logo-icon"></div>
-            Modulus <span style="font-size:12px; font-weight:normal; opacity:0.7; margin-left:5px;">Academia</span>
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" width="22" height="22">
+            </div>
+            <span class="fw-bold" style="letter-spacing: -0.02em;">Modulus Platform</span>
         </div>
         
+        {% if session.get('role') != 'super_admin' %}
+        <div class="context-section">
+            <div class="context-group">
+                <label class="context-label">Módulo</label>
+                <select class="form-select-custom" id="selectModulo" onchange="updateTenantOptions()">
+                    <option value="">Selecione...</option>
+                    {% set unique_modules = [] %}
+                    {% for ctx in session.get('user_contexts', []) %}
+                        {% if ctx.module_id not in unique_modules %}
+                            <option value="{{ ctx.module_id }}" {% if session.get('module_id') == ctx.module_id %}selected{% endif %}>
+                                {{ ctx.module_name }}
+                            </option>
+                            {% set _ = unique_modules.append(ctx.module_id) %}
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="context-group">
+                <label class="context-label">Unidade</label>
+                <select class="form-select-custom" id="selectUnidade" {% if not session.get('module_id') %}disabled{% endif %} onchange="applyContext()">
+                    <option value="">Selecione...</option>
+                    {% if session.get('module_id') %}
+                        {% for ctx in session.get('user_contexts', []) %}
+                            {% if ctx.module_id == session.get('module_id') %}
+                                <option value="{{ ctx.tenant_id }}" {% if session.get('tenant_id') == ctx.tenant_id %}selected{% endif %}>
+                                    {{ ctx.tenant_name }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+        {% endif %}
+
         <ul class="nav-links">
-            <li class="nav-item">
-                <a href="{{ url_for('academia.dashboard') }}" class="{{ 'active' if request.endpoint == 'academia.dashboard' else '' }}">
-                    📊 Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="#">👥 Alunos</a>
-            </li>
-            <li class="nav-item">
-                <a href="#">💰 Financeiro</a>
-            </li>
-            <li class="nav-item">
-                <a href="{{ url_for('academia.settings') }}" class="{{ 'active' if request.endpoint == 'academia.settings' else '' }}">
-                    ⚙️ Configurações
-                </a>
-            </li>
+            {% if session.get('role') == 'super_admin' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('admin.gerenciar_clientes') }}" class="{{ 'active' if request.endpoint == 'admin.gerenciar_clientes' else '' }}">
+                        <i class="bi bi-people"></i> Clientes
+                    </a>
+                </li>
+            {% else %}
+                {% set ctx_ready = session.get('tenant_id') and session.get('module_id') %}
+                <li class="nav-item">
+                    <a href="{{ url_for('academia.dashboard') if ctx_ready else '#' }}" 
+                       class="{{ 'active' if request.endpoint == 'academia.dashboard' else '' }} {{ '' if ctx_ready else 'disabled-link' }}">
+                        <i class="bi bi-grid-1x2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('academia.gerenciar_alunos') if ctx_ready else '#' }}" 
+                       class="{{ 'active' if request.endpoint == 'academia.gerenciar_alunos' else '' }} {{ '' if ctx_ready else 'disabled-link' }}">
+                        <i class="bi bi-person-badge"></i> Alunos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="disabled-link"><i class="bi bi-cash-stack"></i> Financeiro</a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('academia.settings') if ctx_ready else '#' }}" 
+                       class="{{ 'active' if request.endpoint == 'academia.settings' else '' }} {{ '' if ctx_ready else 'disabled-link' }}">
+                        <i class="bi bi-sliders"></i> Configurações
+                    </a>
+                </li>
+            {% endif %}
         </ul>
 
-        <div class="user-profile">
-            Logado como:<br>
-            <strong style="color:white">{{ session.get('user_email', 'Usuário') }}</strong>
-            <a href="{{ url_for('auth.logout') }}">Sair do sistema</a>
+        <div class="sidebar-footer">
+            <div class="text-truncate text-muted mb-2" style="font-size: 11px;">
+                <i class="bi bi-person-circle"></i> {{ session.get('user_email') }}
+            </div>
+            <a href="{{ url_for('auth.logout') }}" class="text-danger text-decoration-none fw-medium">
+                <i class="bi bi-power"></i> Sair
+            </a>
         </div>
     </aside>
 
-    <main class="main-content">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for message in messages %}
-                        <div class="alert {{ 'alert-warning' if 'erro' in message.lower() or 'falha' in message.lower() else 'alert-info' }} alert-dismissible fade show" role="alert">
+    <div class="main-container">
+        {% if session.get('role') != 'super_admin' and not (session.get('tenant_id') and session.get('module_id')) %}
+            <div class="watermark-container">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" class="watermark-logo">
+            </div>
+        {% endif %}
+
+        <main class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'info' }} alert-dismissible fade show border-0 shadow-sm" role="alert">
                             {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
-    </main>
+                {% endif %}
+            {% endwith %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 
-<script>
-    (function() {
-        const timeoutDuration = 5 * 60 * 1000; 
-        let idleTimer;
-        const logoutUser = () => {
-            console.log("Inatividade detectada. Redirecionando para logout...");
-            window.location.href = "{{ url_for('auth.logout') }}";
-        };
-        const resetTimer = () => {
-            clearTimeout(idleTimer);
-            idleTimer = setTimeout(logoutUser, timeoutDuration);
-        };
-        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-        activityEvents.forEach(event => {
-            document.addEventListener(event, resetTimer, true);
-        });
-        resetTimer();
-    })();
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const userContexts = JSON.parse('{{ session.get("user_contexts", []) | tojson | safe }}');
+
+        function updateTenantOptions() {
+            const moduloId = document.getElementById('selectModulo').value;
+            const unitSelect = document.getElementById('selectUnidade');
+            unitSelect.innerHTML = '<option value="">Selecione...</option>';
+            if (!moduloId) { unitSelect.disabled = true; return; }
+            userContexts.filter(c => c.module_id === moduloId).forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.tenant_id;
+                opt.textContent = c.tenant_name;
+                unitSelect.appendChild(opt);
+            });
+            unitSelect.disabled = false;
+        }
+
+        async function applyContext() {
+            const m_id = document.getElementById('selectModulo').value;
+            const t_id = document.getElementById('selectUnidade').value;
+            if (m_id && t_id) {
+                const response = await fetch("{{ url_for('auth.set_context') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ module_id: m_id, tenant_id: t_id })
+                });
+                const data = await response.json();
+                if (data.success) window.location.href = data.redirect;
+            }
+        }
+    </script>
 </body>
 </html>
